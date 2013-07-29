@@ -34,7 +34,10 @@
             
             var sendMessage = function() {
                 chatSocket.send(JSON.stringify(
-                    {text: $("#talk").val()}
+                    {
+                       command: "talk",
+                          text: $("#talk").val()
+                    }
                 ))
                 $("#talk").val('')
             }
@@ -51,20 +54,21 @@
                 } else {
                     $("#onChat").show()
                 }
-                
-                // Create the message element
-                var el = $('<div class="message"><span></span><p></p></div>')
-                $("span", el).text(data.user)
-                $("p", el).text(data.message)
-                $(el).addClass(data.kind)
-                if(data.user == '@username') $(el).addClass('me')
-                $('#messages').append(el)
-                
                 // Update the members list
-                $("#members").html('') 
+                $("#members").html('')
                 $(data.members).each(function() {
                     $("#members").append('<li>' + this + '</li>')
                 })
+
+                // Create the message element
+                if (data.kind != "members") {
+                    var el = $('<div class="message"><span></span><p></p></div>')
+                    $("span", el).text(data.user)
+                    $("p", el).text(data.message)
+                    $(el).addClass(data.kind)
+                    if(data.user == '@username') $(el).addClass('me')
+                    $('#messages').append(el)
+                }
             }
             
             var handleReturnKey = function(e) {
@@ -73,11 +77,17 @@
                     sendMessage()
                 } 
             }
-            
+
             $("#talk").keypress(handleReturnKey)  
             
             chatSocket.onmessage = receiveEvent
-            
+            chatSocket.onopen = function() {
+                chatSocket.send(JSON.stringify(
+                    {
+                        command: "members"
+                    }
+                ))
+            }
         })
     
     </script>
