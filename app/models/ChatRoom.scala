@@ -1,37 +1,35 @@
 package models
 
-import akka.actor._
-import scala.concurrent.duration._
-
 import play.api._
 import play.api.libs.json._
 import play.api.libs.iteratee._
-import play.api.libs.concurrent._
-
-import akka.util.Timeout
-import akka.pattern.ask
-
-import play.api.Play.current
-import play.api.libs.concurrent.Execution.Implicits._
 
 object ChatRoom {
+  val MaxNumber = 100
+  val MinNumber = 1
 
-  implicit val timeout = Timeout(1 second)
+  def validateNumber(n: Int): Boolean = (MinNumber <= n) && (n <= MaxNumber)
 
-  lazy val default = new ChatRoom
+  private[this] var rooms = Map.empty[Int, ChatRoom] // TODO: max room number control
 
-  def join(username:String):(Iteratee[JsValue,_],Enumerator[JsValue]) = {
-    default.receive(Join(username)) match {
+  def join(roomNumber: Int, username:String):(Iteratee[JsValue,_],Enumerator[JsValue]) = synchronized {
+    require(validateNumber(roomNumber))
+    val room: ChatRoom = rooms.get(roomNumber).getOrElse {
+        val newRoom = new ChatRoom
+        rooms = rooms + (roomNumber -> newRoom)
+        newRoom
+      }
+    room.receive(Join(username)) match {
       case Connected(enumerator) =>
         // Create an Iteratee to consume the feed
         val iteratee = Iteratee.foreach[JsValue] { event =>
           val command = (event \ "command").as[String]
           command match {
-            case "members" => default.receive(Members())
-            case _         => default.receive(Talk(username, (event \ "text").as[String]))
+            case "members" => room.receive(Members())
+            case _         => room.receive(Talk(username, (event \ "text").as[String]))
           }
         }.mapDone { _ =>
-          default.receive(Quit(username))
+          room.receive(Quit(username)) // TODO: free room
         }
         (iteratee, enumerator)
       case CannotConnect(error) =>

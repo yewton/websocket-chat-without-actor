@@ -1,4 +1,5 @@
 @(connected: Option[String])(content: Html)
+@import models.ChatRoom
 
 <!DOCTYPE html>
 
@@ -25,6 +26,7 @@
                     }.getOrElse {
                         <form action="@routes.Application.chatRoom()" class="pull-right">
                             <input id="username" name="username" class="input-small" type="text" placeholder="Username">
+                            <input id="roomNumber" name="roomNumber" class="input-small" type="text" placeholder="Room number(@ChatRoom.MinNumber to @ChatRoom.MaxNumber)">
                             <button class="btn" type="submit">Sign in</button>
                         </form>
                     }
